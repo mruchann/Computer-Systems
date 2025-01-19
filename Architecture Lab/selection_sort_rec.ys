@@ -1,0 +1,120 @@
+# Author: Mehmet Rüçhan Yavuzdemir, 2522159
+
+.pos 0x0
+	irmovq stack, %rsp
+	irmovq head, %rdi
+	call selection_sort_rec
+	halt
+
+selection_sort_rec:
+	andq %rdi, %rdi
+	je done
+
+	mrmovq 8(%rdi), %rcx
+	andq %rcx, %rcx
+	je done
+
+    rrmovq %rdi, %r12
+    irmovq $0, %r13
+    rrmovq %rdi, %r14
+
+loop:
+    mrmovq 8(%r14), %rcx
+    andq %rcx, %rcx
+    je loop_done
+
+    mrmovq 8(%r14), %rcx # curr->next
+    mrmovq (%rcx), %rbx # curr->next->data
+    mrmovq (%r12), %rdx # min->data
+
+    subq %rdx, %rbx
+
+    cmovl %rcx, %r12 
+    cmovl %r14, %r13
+
+    mrmovq 8(%r14), %r14
+    jmp loop
+
+loop_done:
+
+    rrmovq %rdi, %rcx
+    subq %r12, %rcx
+    je rec
+
+    mrmovq 8(%rdi), %rdx # temp
+    mrmovq 8(%r12), %rbx # min->next
+    rmmovq %rbx, 8(%rdi)
+
+    rrmovq %r12, %r8
+    subq %rdx, %r8
+    jne else
+
+    rmmovq %rdi, 8(%r12)
+    jmp if_end
+
+else:
+    rmmovq %rdx, 8(%r12)
+    rmmovq %rdi, 8(%r13)
+
+if_end:
+    rrmovq %r12, %rdi
+
+
+rec:
+    pushq %rdi # head
+    pushq %r12 # min
+    pushq %r13 # prevMin
+    pushq %r14 # curr
+
+    mrmovq 8(%rdi), %rdi
+    call selection_sort_rec # rdi should be saved, result is in rax
+
+    popq %r14
+    popq %r13
+    popq %r12
+    popq %rdi
+
+    rmmovq %rax, 8(%rdi)
+
+done:
+	rrmovq %rdi, %rax
+	ret
+
+.pos 0x200
+head:
+	.quad 17
+	.quad node1
+node1:
+	.quad 24
+	.quad node2
+node2:
+	.quad 6
+	.quad node3
+node3:
+	.quad 11
+	.quad node4
+node4:
+	.quad 4
+	.quad node5
+node5:
+	.quad 5
+	.quad node6
+node6:
+	.quad 3
+	.quad node7
+node7:
+	.quad 40
+	.quad node8
+node8:
+	.quad 19
+	.quad node9
+node9:
+	.quad 52
+	.quad node10
+node10:
+	.quad 8
+	.quad 0
+	
+
+.pos 0x1f00
+stack:

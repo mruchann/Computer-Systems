@@ -1,0 +1,35 @@
+.pos 0
+    irmovq $8, %rbx
+    irmovq $1, %rax
+    cmpq %rax, %rbx
+    jg L1
+    irmovq $0xdead, %rax
+    halt
+L1:
+    irmovq $100, %rdx
+    irmovq $110, %rax
+    cmpq %rax, %rdx
+    jl L2
+    irmovq $0xdead, %rax
+    halt
+L2:
+    cmpq %rdx, %rbx
+    jle L3
+    irmovq $0xdead, %rax
+    halt
+L3: 
+    irmovq $8, %rdx
+    cmpq %rdx, %rbx
+    je L4
+    irmovq $0xdead, %rax
+    halt
+L4:
+    irmovq $-8, %rdx
+    cmpq %rdx, %rbx
+    jge L5
+    irmovq $0xdead, %rax
+    halt
+L5:
+    irmovq $0xbeef, %rax
+    halt
+    

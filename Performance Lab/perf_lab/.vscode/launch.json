@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Users/mehmetruchanyavuzdemir/Desktop/331 Labs/Performance Lab/perf_lab",
+      "program": "/Users/mehmetruchanyavuzdemir/Desktop/331 Labs/Performance Lab/perf_lab/build/Debug/outDebug"
+    }
+  ]
+}

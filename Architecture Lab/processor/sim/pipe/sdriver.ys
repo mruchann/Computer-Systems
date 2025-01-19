@@ -1,0 +1,208 @@
+#######################################################################
+# Test for copying block of size 4;
+#######################################################################
+	.pos 0
+main:	irmovq Stack, %rsp  	# Set up stack pointer
+
+	# Set up arguments for copy function and then invoke it
+	irmovq $4, %rdx		# src and dst have 4 elements
+	irmovq dest, %rsi	# dst array
+	irmovq src, %rdi	# src array
+    # corrupt all the unused registers to prevent assumptions
+    irmovq $0x5710331, %rax
+    irmovq $0x5710331, %rbx
+    irmovq $0x5710331, %rcx
+    irmovq $0x5710331, %rbp
+    irmovq $0x5710331, %r8
+    irmovq $0x5710331, %r9
+    irmovq $0x5710331, %r10
+    irmovq $0x5710331, %r11
+    irmovq $0x5710331, %r12
+    irmovq $0x5710331, %r13
+    irmovq $0x5710331, %r14
+	call to_binary_string		
+	 
+	halt			# should halt with sum in %rax
+StartFun:
+# Author: Mehmet Rüçhan Yavuzdemir, 2522159
+
+# First, I implemented loop unrolling and precomputation, which reduced the CPE from 386 to 59. The reasong behind it is that calculating the right shift every 
+# time in a separate loop slows down the benchmark time a lot, and very inefficient. Instead, I precomputed multiples of 2, and put them into registers. Then, 
+# according to the andq result, I put '0' or '1'. This way, I saw a pretty good speed up. I avoided computations in the hot regions, tried to distribute them.
+
+# Next I optimized a small but effective thing. I realized that assigning $48 and $49 at each step was unnecessary as I do it more frequent than andq checkings. 
+# I reserved %r13 and %r14 for $48 and $49. This optimization further reduced the CPE from 59 to 51, 8 CPE speedup. Finally, I made the application 7.5x faster! 
+
+##################################################################
+# %rdi = arr, %rsi = buff, %rdx = len
+to_binary_string:
+    # sum = 0
+    xorq %rax,%rax
+
+    # len <= 0 ?
+    andq %rdx,%rdx
+    jle Done
+
+While_Loop:    
+    # val = *arr
+    mrmovq (%rdi), %rbx
+
+    # sum += val
+    addq %rbx, %rax 
+
+    irmovq $128, %rbp
+    irmovq $64, %r8
+    irmovq $32, %r9
+    irmovq $16, %r10
+    irmovq $8, %r11
+    irmovq $4, %r12
+
+    # irmovq $2, %r13
+    # irmovq $1, %r14
+
+    irmovq $48, %r13
+    irmovq $49, %r14
+
+E1:
+    # = '0'
+    rmmovq %r13, (%rsi)
+
+    andq %rbx, %rbp
+    je E2 # & == 0 ?
+
+    # = '1'
+    rmmovq %r14, (%rsi)
+
+E2:
+    # = '0'
+    rmmovq %r13, 1(%rsi)
+
+    andq %rbx, %r8
+    je E3 # & == 0 ?
+
+    # = '1'
+    rmmovq %r14, 1(%rsi)
+
+E3:
+    # = '0'    
+    rmmovq %r13, 2(%rsi)
+
+    andq %rbx, %r9
+    je E4 # & == 0 ?
+
+    # = '1'
+    rmmovq %r14, 2(%rsi)
+
+E4:
+    # = '0'
+    rmmovq %r13, 3(%rsi)
+
+    andq %rbx, %r10
+    je E5 # & == 0 ?
+
+    # = '1'
+    rmmovq %r14, 3(%rsi)
+
+E5:
+    # = '0'
+    rmmovq %r13, 4(%rsi)
+
+    andq %rbx, %r11
+    je E6 # & == 0 ?
+
+    # = '1'
+    rmmovq %r14, 4(%rsi)
+
+E6:
+    # = '0'
+    rmmovq %r13, 5(%rsi)
+
+    andq %rbx, %r12
+    je E7 # & == 0 ?
+
+    # = '1'
+    rmmovq %r14, 5(%rsi)
+
+E7:
+    # = '0'
+    rmmovq %r13, 6(%rsi)
+
+    irmovq $2, %rcx
+    andq %rbx, %rcx
+    je E8 # & == 0 ?
+
+    # = '1'
+    rmmovq %r14, 6(%rsi)
+
+E8:
+    # = '0'
+    rmmovq %r13, 7(%rsi)
+
+    irmovq $1, %rcx
+    andq %rbx, %rcx
+    je Updates # & == 0 ?
+
+    # = '1'
+    rmmovq %r14, 7(%rsi)
+
+Updates:
+    irmovq $8, %rcx
+
+    # arr++
+    addq %rcx, %rdi 
+
+    # buff++
+    addq %rcx, %rsi 
+ 
+    # --len > 0 ?
+    irmovq $1, %rcx
+    subq %rcx, %rdx
+    jg While_Loop
+    
+Done:
+    ret
+End:
+EndFun:
+
+###############################
+# Source and destination blocks 
+###############################
+	.align 8
+src:
+	.quad 1
+	.quad 2
+	.quad 3
+	.quad 4
+	.quad 0xbcdefa # This shouldn't get moved
+
+	.align 16
+Predest:
+	.quad 0xbcdefa
+dest:
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+Postdest:
+	.quad 0xdefabc
+
+.align 8
+# Run time stack
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+
+Stack:

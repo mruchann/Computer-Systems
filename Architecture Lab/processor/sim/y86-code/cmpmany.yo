@@ -1,0 +1,35 @@
+0x000:                      | .pos 0
+0x000: 30f30800000000000000 |     irmovq $8, %rbx
+0x00a: 30f00100000000000000 |     irmovq $1, %rax
+0x014: d003                 |     cmpq %rax, %rbx
+0x016: 762a00000000000000   |     jg L1
+0x01f: 30f0adde000000000000 |     irmovq $0xdead, %rax
+0x029: 00                   |     halt
+0x02a:                      | L1:
+0x02a: 30f26400000000000000 |     irmovq $100, %rdx
+0x034: 30f06e00000000000000 |     irmovq $110, %rax
+0x03e: d002                 |     cmpq %rax, %rdx
+0x040: 725400000000000000   |     jl L2
+0x049: 30f0adde000000000000 |     irmovq $0xdead, %rax
+0x053: 00                   |     halt
+0x054:                      | L2:
+0x054: d023                 |     cmpq %rdx, %rbx
+0x056: 716a00000000000000   |     jle L3
+0x05f: 30f0adde000000000000 |     irmovq $0xdead, %rax
+0x069: 00                   |     halt
+0x06a:                      | L3: 
+0x06a: 30f20800000000000000 |     irmovq $8, %rdx
+0x074: d023                 |     cmpq %rdx, %rbx
+0x076: 738a00000000000000   |     je L4
+0x07f: 30f0adde000000000000 |     irmovq $0xdead, %rax
+0x089: 00                   |     halt
+0x08a:                      | L4:
+0x08a: 30f2f8ffffffffffffff |     irmovq $-8, %rdx
+0x094: d023                 |     cmpq %rdx, %rbx
+0x096: 75aa00000000000000   |     jge L5
+0x09f: 30f0adde000000000000 |     irmovq $0xdead, %rax
+0x0a9: 00                   |     halt
+0x0aa:                      | L5:
+0x0aa: 30f0efbe000000000000 |     irmovq $0xbeef, %rax
+0x0b4: 00                   |     halt
+                            |     

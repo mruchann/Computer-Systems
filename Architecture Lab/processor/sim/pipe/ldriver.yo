@@ -1,0 +1,326 @@
+                            | #######################################################################
+                            | # Test for copying block of size 63;
+                            | #######################################################################
+0x000:                      | 	.pos 0
+0x000: 30f4c806000000000000 | main:	irmovq Stack, %rsp  	# Set up stack pointer
+                            | 
+                            | 	# Set up arguments for copy function and then invoke it
+0x00a: 30f23f00000000000000 | 	irmovq $63, %rdx		# src and dst have 63 elements
+0x014: 30f64804000000000000 | 	irmovq dest, %rsi	# dst array
+0x01e: 30f74002000000000000 | 	irmovq src, %rdi	# src array
+                            |     # corrupt all the unused registers to prevent assumptions
+0x028: 30f03103710500000000 |     irmovq $0x5710331, %rax
+0x032: 30f33103710500000000 |     irmovq $0x5710331, %rbx
+0x03c: 30f13103710500000000 |     irmovq $0x5710331, %rcx
+0x046: 30f53103710500000000 |     irmovq $0x5710331, %rbp
+0x050: 30f83103710500000000 |     irmovq $0x5710331, %r8
+0x05a: 30f93103710500000000 |     irmovq $0x5710331, %r9
+0x064: 30fa3103710500000000 |     irmovq $0x5710331, %r10
+0x06e: 30fb3103710500000000 |     irmovq $0x5710331, %r11
+0x078: 30fc3103710500000000 |     irmovq $0x5710331, %r12
+0x082: 30fd3103710500000000 |     irmovq $0x5710331, %r13
+0x08c: 30fe3103710500000000 |     irmovq $0x5710331, %r14
+0x096: 80a000000000000000   | 	call to_binary_string		
+                            | 	 
+0x09f: 00                   | 	halt			# should halt with sum in %rax
+0x0a0:                      | StartFun:
+                            | # Author: Mehmet Rüçhan Yavuzdemir, 2522159
+                            | 
+                            | # First, I implemented loop unrolling and precomputation, which reduced the CPE from 386 to 59. The reasong behind it is that calculating the right shift every 
+                            | # time in a separate loop slows down the benchmark time a lot, and very inefficient. Instead, I precomputed multiples of 2, and put them into registers. Then, 
+                            | # according to the andq result, I put '0' or '1'. This way, I saw a pretty good speed up. I avoided computations in the hot regions, tried to distribute them.
+                            | 
+                            | # Next I optimized a small but effective thing. I realized that assigning $48 and $49 at each step was unnecessary as I do it more frequent than andq checkings. 
+                            | # I reserved %r13 and %r14 for $48 and $49. This optimization further reduced the CPE from 59 to 51, 8 CPE speedup. Finally, I made the application 7.5x faster! 
+                            | 
+                            | ##################################################################
+                            | # %rdi = arr, %rsi = buff, %rdx = len
+0x0a0:                      | to_binary_string:
+                            |     # sum = 0
+0x0a0: 6300                 |     xorq %rax,%rax
+                            | 
+                            |     # len <= 0 ?
+0x0a2: 6222                 |     andq %rdx,%rdx
+0x0a4: 713802000000000000   |     jle Done
+                            | 
+0x0ad:                      | While_Loop:    
+                            |     # val = *arr
+0x0ad: 50370000000000000000 |     mrmovq (%rdi), %rbx
+                            | 
+                            |     # sum += val
+0x0b7: 6030                 |     addq %rbx, %rax 
+                            | 
+0x0b9: 30f58000000000000000 |     irmovq $128, %rbp
+0x0c3: 30f84000000000000000 |     irmovq $64, %r8
+0x0cd: 30f92000000000000000 |     irmovq $32, %r9
+0x0d7: 30fa1000000000000000 |     irmovq $16, %r10
+0x0e1: 30fb0800000000000000 |     irmovq $8, %r11
+0x0eb: 30fc0400000000000000 |     irmovq $4, %r12
+                            | 
+                            |     # irmovq $2, %r13
+                            |     # irmovq $1, %r14
+                            | 
+0x0f5: 30fd3000000000000000 |     irmovq $48, %r13
+0x0ff: 30fe3100000000000000 |     irmovq $49, %r14
+                            | 
+0x109:                      | E1:
+                            |     # = '0'
+0x109: 40d60000000000000000 |     rmmovq %r13, (%rsi)
+                            | 
+0x113: 6235                 |     andq %rbx, %rbp
+0x115: 732801000000000000   |     je E2 # & == 0 ?
+                            | 
+                            |     # = '1'
+0x11e: 40e60000000000000000 |     rmmovq %r14, (%rsi)
+                            | 
+0x128:                      | E2:
+                            |     # = '0'
+0x128: 40d60100000000000000 |     rmmovq %r13, 1(%rsi)
+                            | 
+0x132: 6238                 |     andq %rbx, %r8
+0x134: 734701000000000000   |     je E3 # & == 0 ?
+                            | 
+                            |     # = '1'
+0x13d: 40e60100000000000000 |     rmmovq %r14, 1(%rsi)
+                            | 
+0x147:                      | E3:
+                            |     # = '0'    
+0x147: 40d60200000000000000 |     rmmovq %r13, 2(%rsi)
+                            | 
+0x151: 6239                 |     andq %rbx, %r9
+0x153: 736601000000000000   |     je E4 # & == 0 ?
+                            | 
+                            |     # = '1'
+0x15c: 40e60200000000000000 |     rmmovq %r14, 2(%rsi)
+                            | 
+0x166:                      | E4:
+                            |     # = '0'
+0x166: 40d60300000000000000 |     rmmovq %r13, 3(%rsi)
+                            | 
+0x170: 623a                 |     andq %rbx, %r10
+0x172: 738501000000000000   |     je E5 # & == 0 ?
+                            | 
+                            |     # = '1'
+0x17b: 40e60300000000000000 |     rmmovq %r14, 3(%rsi)
+                            | 
+0x185:                      | E5:
+                            |     # = '0'
+0x185: 40d60400000000000000 |     rmmovq %r13, 4(%rsi)
+                            | 
+0x18f: 623b                 |     andq %rbx, %r11
+0x191: 73a401000000000000   |     je E6 # & == 0 ?
+                            | 
+                            |     # = '1'
+0x19a: 40e60400000000000000 |     rmmovq %r14, 4(%rsi)
+                            | 
+0x1a4:                      | E6:
+                            |     # = '0'
+0x1a4: 40d60500000000000000 |     rmmovq %r13, 5(%rsi)
+                            | 
+0x1ae: 623c                 |     andq %rbx, %r12
+0x1b0: 73c301000000000000   |     je E7 # & == 0 ?
+                            | 
+                            |     # = '1'
+0x1b9: 40e60500000000000000 |     rmmovq %r14, 5(%rsi)
+                            | 
+0x1c3:                      | E7:
+                            |     # = '0'
+0x1c3: 40d60600000000000000 |     rmmovq %r13, 6(%rsi)
+                            | 
+0x1cd: 30f10200000000000000 |     irmovq $2, %rcx
+0x1d7: 6231                 |     andq %rbx, %rcx
+0x1d9: 73ec01000000000000   |     je E8 # & == 0 ?
+                            | 
+                            |     # = '1'
+0x1e2: 40e60600000000000000 |     rmmovq %r14, 6(%rsi)
+                            | 
+0x1ec:                      | E8:
+                            |     # = '0'
+0x1ec: 40d60700000000000000 |     rmmovq %r13, 7(%rsi)
+                            | 
+0x1f6: 30f10100000000000000 |     irmovq $1, %rcx
+0x200: 6231                 |     andq %rbx, %rcx
+0x202: 731502000000000000   |     je Updates # & == 0 ?
+                            | 
+                            |     # = '1'
+0x20b: 40e60700000000000000 |     rmmovq %r14, 7(%rsi)
+                            | 
+0x215:                      | Updates:
+0x215: 30f10800000000000000 |     irmovq $8, %rcx
+                            | 
+                            |     # arr++
+0x21f: 6017                 |     addq %rcx, %rdi 
+                            | 
+                            |     # buff++
+0x221: 6016                 |     addq %rcx, %rsi 
+                            |  
+                            |     # --len > 0 ?
+0x223: 30f10100000000000000 |     irmovq $1, %rcx
+0x22d: 6112                 |     subq %rcx, %rdx
+0x22f: 76ad00000000000000   |     jg While_Loop
+                            |     
+0x238:                      | Done:
+0x238: 90                   |     ret
+0x239:                      | End:
+0x239:                      | EndFun:
+                            | 
+                            | ###############################
+                            | # Source and destination blocks 
+                            | ###############################
+0x240:                      | 	.align 8
+0x240:                      | src:
+0x240: 0100000000000000     | 	.quad 1
+0x248: 0200000000000000     | 	.quad 2
+0x250: 0300000000000000     | 	.quad 3
+0x258: 0400000000000000     | 	.quad 4
+0x260: 0500000000000000     | 	.quad 5
+0x268: 0600000000000000     | 	.quad 6
+0x270: 0700000000000000     | 	.quad 7
+0x278: 0800000000000000     | 	.quad 8
+0x280: 0900000000000000     | 	.quad 9
+0x288: 0a00000000000000     | 	.quad 10
+0x290: 0b00000000000000     | 	.quad 11
+0x298: 0c00000000000000     | 	.quad 12
+0x2a0: 0d00000000000000     | 	.quad 13
+0x2a8: 0e00000000000000     | 	.quad 14
+0x2b0: 0f00000000000000     | 	.quad 15
+0x2b8: 1000000000000000     | 	.quad 16
+0x2c0: 1100000000000000     | 	.quad 17
+0x2c8: 1200000000000000     | 	.quad 18
+0x2d0: 1300000000000000     | 	.quad 19
+0x2d8: 1400000000000000     | 	.quad 20
+0x2e0: 1500000000000000     | 	.quad 21
+0x2e8: 1600000000000000     | 	.quad 22
+0x2f0: 1700000000000000     | 	.quad 23
+0x2f8: 1800000000000000     | 	.quad 24
+0x300: 1900000000000000     | 	.quad 25
+0x308: 1a00000000000000     | 	.quad 26
+0x310: 1b00000000000000     | 	.quad 27
+0x318: 1c00000000000000     | 	.quad 28
+0x320: 1d00000000000000     | 	.quad 29
+0x328: 1e00000000000000     | 	.quad 30
+0x330: 1f00000000000000     | 	.quad 31
+0x338: 2000000000000000     | 	.quad 32
+0x340: 2100000000000000     | 	.quad 33
+0x348: 2200000000000000     | 	.quad 34
+0x350: 2300000000000000     | 	.quad 35
+0x358: 2400000000000000     | 	.quad 36
+0x360: 2500000000000000     | 	.quad 37
+0x368: 2600000000000000     | 	.quad 38
+0x370: 2700000000000000     | 	.quad 39
+0x378: 2800000000000000     | 	.quad 40
+0x380: 2900000000000000     | 	.quad 41
+0x388: 2a00000000000000     | 	.quad 42
+0x390: 2b00000000000000     | 	.quad 43
+0x398: 2c00000000000000     | 	.quad 44
+0x3a0: 2d00000000000000     | 	.quad 45
+0x3a8: 2e00000000000000     | 	.quad 46
+0x3b0: 2f00000000000000     | 	.quad 47
+0x3b8: 3000000000000000     | 	.quad 48
+0x3c0: 3100000000000000     | 	.quad 49
+0x3c8: 3200000000000000     | 	.quad 50
+0x3d0: 3300000000000000     | 	.quad 51
+0x3d8: 3400000000000000     | 	.quad 52
+0x3e0: 3500000000000000     | 	.quad 53
+0x3e8: 3600000000000000     | 	.quad 54
+0x3f0: 3700000000000000     | 	.quad 55
+0x3f8: 3800000000000000     | 	.quad 56
+0x400: 3900000000000000     | 	.quad 57
+0x408: 3a00000000000000     | 	.quad 58
+0x410: 3b00000000000000     | 	.quad 59
+0x418: 3c00000000000000     | 	.quad 60
+0x420: 3d00000000000000     | 	.quad 61
+0x428: 3e00000000000000     | 	.quad 62
+0x430: 3f00000000000000     | 	.quad 63
+0x438: fadebc0000000000     | 	.quad 0xbcdefa # This shouldn't get moved
+                            | 
+0x440:                      | 	.align 16
+0x440:                      | Predest:
+0x440: fadebc0000000000     | 	.quad 0xbcdefa
+0x448:                      | dest:
+0x448: abefcd0000000000     | 	.quad 0xcdefab
+0x450: abefcd0000000000     | 	.quad 0xcdefab
+0x458: abefcd0000000000     | 	.quad 0xcdefab
+0x460: abefcd0000000000     | 	.quad 0xcdefab
+0x468: abefcd0000000000     | 	.quad 0xcdefab
+0x470: abefcd0000000000     | 	.quad 0xcdefab
+0x478: abefcd0000000000     | 	.quad 0xcdefab
+0x480: abefcd0000000000     | 	.quad 0xcdefab
+0x488: abefcd0000000000     | 	.quad 0xcdefab
+0x490: abefcd0000000000     | 	.quad 0xcdefab
+0x498: abefcd0000000000     | 	.quad 0xcdefab
+0x4a0: abefcd0000000000     | 	.quad 0xcdefab
+0x4a8: abefcd0000000000     | 	.quad 0xcdefab
+0x4b0: abefcd0000000000     | 	.quad 0xcdefab
+0x4b8: abefcd0000000000     | 	.quad 0xcdefab
+0x4c0: abefcd0000000000     | 	.quad 0xcdefab
+0x4c8: abefcd0000000000     | 	.quad 0xcdefab
+0x4d0: abefcd0000000000     | 	.quad 0xcdefab
+0x4d8: abefcd0000000000     | 	.quad 0xcdefab
+0x4e0: abefcd0000000000     | 	.quad 0xcdefab
+0x4e8: abefcd0000000000     | 	.quad 0xcdefab
+0x4f0: abefcd0000000000     | 	.quad 0xcdefab
+0x4f8: abefcd0000000000     | 	.quad 0xcdefab
+0x500: abefcd0000000000     | 	.quad 0xcdefab
+0x508: abefcd0000000000     | 	.quad 0xcdefab
+0x510: abefcd0000000000     | 	.quad 0xcdefab
+0x518: abefcd0000000000     | 	.quad 0xcdefab
+0x520: abefcd0000000000     | 	.quad 0xcdefab
+0x528: abefcd0000000000     | 	.quad 0xcdefab
+0x530: abefcd0000000000     | 	.quad 0xcdefab
+0x538: abefcd0000000000     | 	.quad 0xcdefab
+0x540: abefcd0000000000     | 	.quad 0xcdefab
+0x548: abefcd0000000000     | 	.quad 0xcdefab
+0x550: abefcd0000000000     | 	.quad 0xcdefab
+0x558: abefcd0000000000     | 	.quad 0xcdefab
+0x560: abefcd0000000000     | 	.quad 0xcdefab
+0x568: abefcd0000000000     | 	.quad 0xcdefab
+0x570: abefcd0000000000     | 	.quad 0xcdefab
+0x578: abefcd0000000000     | 	.quad 0xcdefab
+0x580: abefcd0000000000     | 	.quad 0xcdefab
+0x588: abefcd0000000000     | 	.quad 0xcdefab
+0x590: abefcd0000000000     | 	.quad 0xcdefab
+0x598: abefcd0000000000     | 	.quad 0xcdefab
+0x5a0: abefcd0000000000     | 	.quad 0xcdefab
+0x5a8: abefcd0000000000     | 	.quad 0xcdefab
+0x5b0: abefcd0000000000     | 	.quad 0xcdefab
+0x5b8: abefcd0000000000     | 	.quad 0xcdefab
+0x5c0: abefcd0000000000     | 	.quad 0xcdefab
+0x5c8: abefcd0000000000     | 	.quad 0xcdefab
+0x5d0: abefcd0000000000     | 	.quad 0xcdefab
+0x5d8: abefcd0000000000     | 	.quad 0xcdefab
+0x5e0: abefcd0000000000     | 	.quad 0xcdefab
+0x5e8: abefcd0000000000     | 	.quad 0xcdefab
+0x5f0: abefcd0000000000     | 	.quad 0xcdefab
+0x5f8: abefcd0000000000     | 	.quad 0xcdefab
+0x600: abefcd0000000000     | 	.quad 0xcdefab
+0x608: abefcd0000000000     | 	.quad 0xcdefab
+0x610: abefcd0000000000     | 	.quad 0xcdefab
+0x618: abefcd0000000000     | 	.quad 0xcdefab
+0x620: abefcd0000000000     | 	.quad 0xcdefab
+0x628: abefcd0000000000     | 	.quad 0xcdefab
+0x630: abefcd0000000000     | 	.quad 0xcdefab
+0x638: abefcd0000000000     | 	.quad 0xcdefab
+0x640:                      | Postdest:
+0x640: bcfade0000000000     | 	.quad 0xdefabc
+                            | 
+0x648:                      | .align 8
+                            | # Run time stack
+0x648: 0000000000000000     | 	.quad 0
+0x650: 0000000000000000     | 	.quad 0
+0x658: 0000000000000000     | 	.quad 0
+0x660: 0000000000000000     | 	.quad 0
+0x668: 0000000000000000     | 	.quad 0
+0x670: 0000000000000000     | 	.quad 0
+0x678: 0000000000000000     | 	.quad 0
+0x680: 0000000000000000     | 	.quad 0
+0x688: 0000000000000000     | 	.quad 0
+0x690: 0000000000000000     | 	.quad 0
+0x698: 0000000000000000     | 	.quad 0
+0x6a0: 0000000000000000     | 	.quad 0
+0x6a8: 0000000000000000     | 	.quad 0
+0x6b0: 0000000000000000     | 	.quad 0
+0x6b8: 0000000000000000     | 	.quad 0
+0x6c0: 0000000000000000     | 	.quad 0
+                            | 
+0x6c8:                      | Stack:

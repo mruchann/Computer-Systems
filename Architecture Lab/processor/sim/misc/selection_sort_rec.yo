@@ -1,0 +1,120 @@
+                            | # Author: Mehmet Rüçhan Yavuzdemir, 2522159
+                            | 
+0x000:                      | .pos 0x0
+0x000: 30f4001f000000000000 | 	irmovq stack, %rsp
+0x00a: 30f70002000000000000 | 	irmovq head, %rdi
+0x014: 801e00000000000000   | 	call selection_sort_rec
+0x01d: 00                   | 	halt
+                            | 
+0x01e:                      | selection_sort_rec:
+0x01e: 6277                 | 	andq %rdi, %rdi
+0x020: 732601000000000000   | 	je done
+                            | 
+0x029: 50170800000000000000 | 	mrmovq 8(%rdi), %rcx
+0x033: 6211                 | 	andq %rcx, %rcx
+0x035: 732601000000000000   | 	je done
+                            | 
+0x03e: 207c                 |     rrmovq %rdi, %r12
+0x040: 30fd0000000000000000 |     irmovq $0, %r13
+0x04a: 207e                 |     rrmovq %rdi, %r14
+                            | 
+0x04c:                      | loop:
+0x04c: 501e0800000000000000 |     mrmovq 8(%r14), %rcx
+0x056: 6211                 |     andq %rcx, %rcx
+0x058: 739800000000000000   |     je loop_done
+                            | 
+0x061: 501e0800000000000000 |     mrmovq 8(%r14), %rcx # curr->next
+0x06b: 50310000000000000000 |     mrmovq (%rcx), %rbx # curr->next->data
+0x075: 502c0000000000000000 |     mrmovq (%r12), %rdx # min->data
+                            | 
+0x07f: 6123                 |     subq %rdx, %rbx
+                            | 
+0x081: 221c                 |     cmovl %rcx, %r12 
+0x083: 22ed                 |     cmovl %r14, %r13
+                            | 
+0x085: 50ee0800000000000000 |     mrmovq 8(%r14), %r14
+0x08f: 704c00000000000000   |     jmp loop
+                            | 
+0x098:                      | loop_done:
+                            | 
+0x098: 2071                 |     rrmovq %rdi, %rcx
+0x09a: 61c1                 |     subq %r12, %rcx
+0x09c: 73f900000000000000   |     je rec
+                            | 
+0x0a5: 50270800000000000000 |     mrmovq 8(%rdi), %rdx # temp
+0x0af: 503c0800000000000000 |     mrmovq 8(%r12), %rbx # min->next
+0x0b9: 40370800000000000000 |     rmmovq %rbx, 8(%rdi)
+                            | 
+0x0c3: 20c8                 |     rrmovq %r12, %r8
+0x0c5: 6128                 |     subq %rdx, %r8
+0x0c7: 74e300000000000000   |     jne else
+                            | 
+0x0d0: 407c0800000000000000 |     rmmovq %rdi, 8(%r12)
+0x0da: 70f700000000000000   |     jmp if_end
+                            | 
+0x0e3:                      | else:
+0x0e3: 402c0800000000000000 |     rmmovq %rdx, 8(%r12)
+0x0ed: 407d0800000000000000 |     rmmovq %rdi, 8(%r13)
+                            | 
+0x0f7:                      | if_end:
+0x0f7: 20c7                 |     rrmovq %r12, %rdi
+                            | 
+                            | 
+0x0f9:                      | rec:
+0x0f9: a07f                 |     pushq %rdi # head
+0x0fb: a0cf                 |     pushq %r12 # min
+0x0fd: a0df                 |     pushq %r13 # prevMin
+0x0ff: a0ef                 |     pushq %r14 # curr
+                            | 
+0x101: 50770800000000000000 |     mrmovq 8(%rdi), %rdi
+0x10b: 801e00000000000000   |     call selection_sort_rec # rdi should be saved, result is in rax
+                            | 
+0x114: b0ef                 |     popq %r14
+0x116: b0df                 |     popq %r13
+0x118: b0cf                 |     popq %r12
+0x11a: b07f                 |     popq %rdi
+                            | 
+0x11c: 40070800000000000000 |     rmmovq %rax, 8(%rdi)
+                            | 
+0x126:                      | done:
+0x126: 2070                 | 	rrmovq %rdi, %rax
+0x128: 90                   | 	ret
+                            | 
+0x200:                      | .pos 0x200
+0x200:                      | head:
+0x200: 1100000000000000     | 	.quad 17
+0x208: 1002000000000000     | 	.quad node1
+0x210:                      | node1:
+0x210: 1800000000000000     | 	.quad 24
+0x218: 2002000000000000     | 	.quad node2
+0x220:                      | node2:
+0x220: 0600000000000000     | 	.quad 6
+0x228: 3002000000000000     | 	.quad node3
+0x230:                      | node3:
+0x230: 0b00000000000000     | 	.quad 11
+0x238: 4002000000000000     | 	.quad node4
+0x240:                      | node4:
+0x240: 0400000000000000     | 	.quad 4
+0x248: 5002000000000000     | 	.quad node5
+0x250:                      | node5:
+0x250: 0500000000000000     | 	.quad 5
+0x258: 6002000000000000     | 	.quad node6
+0x260:                      | node6:
+0x260: 0300000000000000     | 	.quad 3
+0x268: 7002000000000000     | 	.quad node7
+0x270:                      | node7:
+0x270: 2800000000000000     | 	.quad 40
+0x278: 8002000000000000     | 	.quad node8
+0x280:                      | node8:
+0x280: 1300000000000000     | 	.quad 19
+0x288: 9002000000000000     | 	.quad node9
+0x290:                      | node9:
+0x290: 3400000000000000     | 	.quad 52
+0x298: a002000000000000     | 	.quad node10
+0x2a0:                      | node10:
+0x2a0: 0800000000000000     | 	.quad 8
+0x2a8: 0000000000000000     | 	.quad 0
+                            | 	
+                            | 
+0x1f00:                      | .pos 0x1f00
+0x1f00:                      | stack:
